@@ -22,4 +22,5 @@ bias*
 
 # Exceptions
 !apo.pdb
+!holo.pdb
 !apo_holo.dat
