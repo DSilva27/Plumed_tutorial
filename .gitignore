@@ -19,3 +19,7 @@ bias*
 
 # Backups
 \#*
+
+# Exceptions
+!apo.pdb
+!apo_holo.dat
