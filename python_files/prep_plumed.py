@@ -113,7 +113,7 @@ rmsd: RMSD REFERENCE={ref_pdb} TYPE=OPTIMAL
 emr: BIASVALUE ARG=rmsd STRIDE=2
 
 # print useful info to file
-PRINT ARG=gmm.* FILE=COLVAR STRIDE=1000
+PRINT ARG=* FILE=COLVAR STRIDE=1000
 """.format(ref_pdb=ref_pdb_file))
 fout.close()
 
