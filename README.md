@@ -74,13 +74,13 @@ Notes:
   ```
   
 ### Run production MD
-
+Note: if nsteps is not provided the simulation runs indefinitely.
 ```bash
-  mpirun -n [n_ranks] gmx_mpi mdrun -plumed -multi [n_rep] -ntomp [n_threads]
+  mpirun -n [n_ranks] gmx_mpi mdrun -plumed -multi [n_rep] -ntomp [n_threads] -nsteps [number of steps]
   ```
   
 ### Restarting
 Uncomment out #RESTART in plumed.dat
 ```bash
-  mpirun -n [n_ranks] gmx_mpi mdrun -plumed -multi [n_rep] -ntomp [n_threads] -cpi state
+  mpirun -n [n_ranks] gmx_mpi mdrun -plumed -multi [n_rep] -ntomp [n_threads] -cpi state -nsteps [number of steps]
   ```
