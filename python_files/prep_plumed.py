@@ -107,13 +107,13 @@ fout.write("""# RESTART
 # include topology info: this is needed to identify atom types
 MOLINFO STRUCTURE=structure.pdb
 
-RMSD REFERENCE={ref_pdb} TYPE=OPTIMAL
+rmsd: RMSD REFERENCE={ref_pdb} TYPE=OPTIMAL
 
 # translate into bias
-emr: BIASVALUE ARG=gmm.scoreb STRIDE=2
+emr: BIASVALUE ARG=rmsd STRIDE=2
 
 # print useful info to file
 PRINT ARG=gmm.* FILE=COLVAR STRIDE=1000
-""".format(ref=ref_pdb=ref_pdb_file))
+""".format(ref_pdb=ref_pdb_file))
 fout.close()
 
