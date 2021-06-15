@@ -1,13 +1,17 @@
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("--ref_pdb", help="full path to the pdf file used for reference",required=True)
+parser.add_argument("--map_dat", help="full path to the GMM dat file for the map",required=True)
 parser.add_argument("--n_proc", help="number of threads to use",required=True)
 parser.add_argument("--n_rep", help="number of replicas to simulate",required=True)
+parser.add_argument("--res", help="Resolution of the cryo-em map", required=True, type=float)
+parser.add_argument("--sigma_min", help="SIGMA_MIN parameter for EMMI", default=0.02)
 
-args = parser.parse_args()
-ref_pdb_file = args.ref_pdb
-n_proc = int(args.n_proc)
-replicas = int(args.n_rep)
+args = parser.parse_args()                                                                                                                                          
+map_plumed_dat_file = args.map_dat                                                                                                                                  
+n_proc = int(args.n_proc)                                                                                                                                           
+replicas = int(args.n_rep)  
+res = args.res
+sigma_min = args.sigma_min
 
 import os
 
@@ -104,16 +108,53 @@ print(p.map(create_topols,range(0,replicas,1)))
 
 fout = open("plumed.dat","w")
 fout.write("""# RESTART
+
 # include topology info: this is needed to identify atom types
 MOLINFO STRUCTURE=structure.pdb
 
-rmsd: RMSD REFERENCE={ref_pdb} TYPE=OPTIMAL
+# define all heavy atoms using GROMACS index file
+# which can be created with gmx_mpi make_ndx
+protein-h: GROUP NDX_FILE=index.ndx NDX_GROUP=Protein-H
+protein: GROUP NDX_FILE=index.ndx NDX_GROUP=Protein
+protein-no-negative: GROUP NDX_FILE=index.ndx NDX_GROUP=Protein-no-negative-no-h
+# water: GROUP NDX_FILE=index.ndx NDX_GROUP=Water
 
-# translate into bias
-emr: BIASVALUE ARG=rmsd STRIDE=2
+# make protein whole: add reference position of first heavy atom (in nm)
+WHOLEMOLECULES ADDREFERENCE ENTITY0=protein REF0={ref}
+
+# create EMMI score
+EMMI ...
+LABEL=gmm NOPBC TEMP=300.0 NL_STRIDE=50 NL_CUTOFF=0.01
+ATOMS=protein-no-negative GMM_FILE={map_dat}
+SIGMA_MIN={sigma_min} RESOLUTION={res} NOISETYPE=MARGINAL
+...
+
+3# translate into bias                                                                                                                                                
+34emr: BIASVALUE ARG=gmm.scoreb STRIDE=1                                                                                                                               
+35                                                                                                                                                                     
+36SELECTOR NAME=BETA VALUE=0                                                                                                                                           
+37                                                                                                                                                                     
+38RESCALE ...                                                                                                                                                          
+39LABEL=res ARG=emr.bias TEMP=300                                                                                                                                      
+40SELECTOR=BETA MAX_RESCALE=1000 NBIN=20                                                                                                                               
+41W0=1000 BIASFACTOR=150000 BSTRIDE=1000 BFILE=bias.dat                                                                                                                
+42MC_STRIDE=1                                                                                                                                                          
+43...     
 
 # print useful info to file
 PRINT ARG=* FILE=COLVAR STRIDE=1000
-""".format(ref_pdb=ref_pdb_file))
+""".format(ref=ref, map_dat=map_plumed_dat_file, sigma_min=sigma_min, res=res))
 fout.close()
+
+print("""
+You should be set to run:
+mpirun -n N_RANKS gmx_mpi mdrun -plumed -multi {n_rep} -ntomp N_THREADS
+if you need to restart:
+Edit plumed.dat
+Uncomment out #RESTART
+Then on command line try:
+mpirun -n N_RANKS gmx_mpi mdrun -plumed -multi {n_rep} -ntomp N_THREADS -cpi state
+you can analyze on the fly or at end with:
+generate_trajectories_as_pdbs.py
+""".format(n_rep=replicas))
 
